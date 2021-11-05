@@ -1,0 +1,4 @@
+port: 8080
+cities: ["London", "Syzran'"]
+updatesInterval: 1
+precisionRange: 8000
