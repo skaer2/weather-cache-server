@@ -8,25 +8,12 @@ module OpenWeatherAPI where
 
 import Prelude hiding (lookup)
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.Aeson
 import Data.Proxy
-import GHC.Generics
-import Network.Wai
-import Network.Wai.Handler.Warp
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Servant
-import Servant.API
 import Servant.Client
 import Data.Text (Text)
 import Data.Cache
-import Data.Cache.Internal
-import System.Clock
-
-import qualified Data.Text                as T
-import qualified Data.Text.IO             as T
-import qualified Servant.Client.Streaming as S
 
 import OpenWeatherResponce
 
@@ -39,7 +26,6 @@ api = Proxy
 openweatherQueryHandler :: Maybe City -> Maybe OpenWeatherAPIKey -> Maybe Text -> ClientM OpenWeatherResponce
 openweatherQueryHandler = client api 
 
---(BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/")
 makeAPIQuery :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> City -> Maybe Int -> IO (Maybe OpenWeatherResponce)
 makeAPIQuery cache apikey apidomain precision city maybeDatetime = do
     case maybeDatetime of
@@ -69,5 +55,4 @@ getCurrentWeatherResponce apikey apidomain city = do
             putStrLn $ "Error: " ++ take 2000 (show err)
             return Nothing
         Right weatherResponce -> do
-            --putStrLn $ show weatherResponce
             return (Just weatherResponce)

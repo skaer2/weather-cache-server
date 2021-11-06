@@ -4,31 +4,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-import Prelude hiding (lookup)
-
 import GHC.Int (Int64)
 import System.Environment
 import Control.Concurrent
 import Control.Monad
-import Control.Monad.IO.Class
 import Data.Aeson
-import Data.Proxy
 import GHC.Generics
-import Network.Wai
 import Network.Wai.Handler.Warp
-import Network.HTTP.Client (newManager, defaultManagerSettings)
-import Servant
-import Servant.API
-import Servant.Client
 import Data.Text (Text)
 import Data.Cache
-import Data.Cache.Internal
 import System.Clock
 import Data.Yaml
 
 import qualified Data.Text                as T
-import qualified Data.Text.IO             as T
-import qualified Servant.Client.Streaming as S
 
 import OpenWeatherResponce
 import ServerAPI
@@ -60,8 +48,11 @@ generateCache expirationTime = newCache $ Just $ TimeSpec {sec = expirationTime,
 delayedCaching :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> [City] -> Int -> IO ()
 delayedCaching cache apikey apidomain precision cityList delay = do
     putStrLn "updating cache"
-    mapM (\city -> makeAPIQuery cache apikey apidomain precision city Nothing) cityList
-    threadDelay(10^6 * 60 * delay)
+    _ <- mapM (\city -> makeAPIQuery cache apikey apidomain precision city Nothing) cityList
+    threadDelay(microsecondsToMinutes delay)
+    where
+        microsecondsToMinutes :: Int -> Int
+        microsecondsToMinutes x = 60 * 1000000 * x
 
 main :: IO ()
 main = do
@@ -78,43 +69,10 @@ main = do
             apikey <- getEnv "API_KEY"
             apiDomainName <- getEnv "API_DOMAIN_NAME"
             putStrLn "starting automatic cache updates"
-            forkIO $ forever $ delayedCaching cache (T.pack apikey) apiDomainName (precisionRange conf) (cities conf) (updatesInterval conf)
+            _ <- forkIO $ forever $ delayedCaching cache (T.pack apikey) apiDomainName (precisionRange conf) (cities conf) (updatesInterval conf)
             putStrLn "starting query listening"
             run (port conf) $ app1 cache (T.pack apikey) apiDomainName (precisionRange conf)
 
     where
         getConfig :: IO (Either ParseException Config)
         getConfig = decodeFileEither "config.yaml"
-
-testResponce :: OpenWeatherResponce
-testResponce = OpenWeatherResponce 
-    { coord = Coord
-        { lat = 51.5085 
-        , lon = -0.1257
-        }
-    , weather = []
-    , responce_main = Responce_Main 
-        { temp = 8.92
-        , feels_like = 0
-        , temp_min = 0
-        , temp_max = 0
-        , pressure = 0
-        , humidity = 0
-        , sea_level = Nothing
-        , grnd_level = Nothing
-        }
-    , visibility = 10000
-    , wind = Wind 
-        {deg = 321
-        , speed = 0.45
-        , gust = Nothing
-        }
-    , clouds = Clouds {all = 90}
-    , rain = Nothing
-    , snow = Nothing
-    , dt = 631
-    , timezone = 0
-    , id = 0
-    , name = "London"
-    }
-

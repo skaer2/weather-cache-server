@@ -6,25 +6,10 @@
 
 module OpenWeatherResponce where
 
-import Control.Monad
-import Control.Monad.IO.Class
 import Data.Aeson
-import Data.Proxy
 import GHC.Generics
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Network.HTTP.Client (newManager, defaultManagerSettings)
-import Servant
-import Servant.API
-import Servant.Client
 import Data.Text (Text)
 import Data.Cache
-import Data.Cache.Internal
-import System.Clock
-
-import qualified Data.Text                as T
-import qualified Data.Text.IO             as T
-import qualified Servant.Client.Streaming as S
 
 data OpenWeatherResponce = OpenWeatherResponce 
     { coord :: Coord
@@ -37,7 +22,7 @@ data OpenWeatherResponce = OpenWeatherResponce
     , snow :: Maybe Snow
     , dt :: Int
     , timezone :: Int
-    , id :: Int
+    , responce_id :: Int
     , name :: Text
     } deriving (Eq, Show, Generic)
 
@@ -53,7 +38,7 @@ instance FromJSON OpenWeatherResponce where
         snow <- o .:? "snow"
         dt <- o .: "dt"
         timezone <- o .: "timezone"
-        id <- o .: "id"
+        responce_id <- o .: "id"
         name <- o .: "name"
         return OpenWeatherResponce {..}
 
