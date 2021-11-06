@@ -65,7 +65,6 @@ main = do
             putStrLn $ "current config is:"
             putStrLn $ show conf
             cache <- generateCache (cacheExpirationTime conf)
-            insert cache ("London", 631) testResponce  
             apikey <- getEnv "API_KEY"
             apiDomainName <- getEnv "API_DOMAIN_NAME"
             putStrLn "starting automatic cache updates"
