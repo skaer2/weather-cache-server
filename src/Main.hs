@@ -6,6 +6,7 @@
 
 import Prelude hiding (lookup)
 
+import GHC.Int (Int64)
 import System.Environment
 import Control.Concurrent
 import Control.Monad
@@ -36,43 +37,49 @@ import OpenWeatherAPI
 data Config = Config
     { port :: Int
     , cities :: [Text]
-    , updatesInterval :: Int
-    , precisionRange :: Int
+    , updatesInterval :: Int --time interval in minutes
+    , precisionRange :: Int --range in seconds
+    , cacheExpirationTime :: Int64 --time cache is stored for in seconds
     } deriving (Eq, Show, Generic)
 
 instance FromJSON Config where
     parseJSON = withObject "config" $ \o -> do
         port <- o .: "port"
         cities <- o .: "cities"
-        updatesInterval <- o .:? "updatesInterval" .!= 60 -- update each hour
-        precisionRange <- o .:? "precisionRange" .!= 3600 -- range is 30 minutes before and after the requested time
+        updatesInterval <- o .:? "updatesInterval" .!= 60 
+        precisionRange <- o .:? "precisionRange" .!= 3600         
+        cacheExpirationTime <- o .:? "cacheExpirationTime" .!= 1800 
         return Config {..}
 
 
 
-generateCache :: IO WeatherCache
-generateCache = newCache $ Just $ TimeSpec {sec = 1800, nsec = 0}
-  --newCache $ Just $ TimeSpec {sec = 604800, nsec = 0}
+generateCache :: Int64 -> IO WeatherCache
+generateCache expirationTime = newCache $ Just $ TimeSpec {sec = expirationTime, nsec = 0}
 
 
 delayedCaching :: WeatherCache -> OpenWeatherAPIKey -> Int -> [City] -> Int -> IO ()
 delayedCaching cache apikey precision cityList delay = do
-    putStrLn "HELLO!!! :-)"
+    putStrLn "updating cache"
     mapM (\city -> makeAPIQuery cache apikey precision city Nothing) cityList
     threadDelay(10^6 * 60 * delay)
 
 main :: IO ()
 main = do
-    cache <- generateCache
-    insert cache ("London", 631) testResponce  
-    putStrLn "entered main"
+    putStrLn "starting the server"
     config <- getConfig
+    putStrLn "attempting to read config.yaml"
     case config of 
         Left err -> putStrLn $ "Error" ++ (show err)
         Right conf -> do
-            print conf
+            putStrLn $ "current config is:"
+            putStrLn $ show conf
+            cache <- generateCache (cacheExpirationTime conf)
+            insert cache ("London", 631) testResponce  
             apikey <- getEnv "API_KEY"
+            --apiDomainName <- getEnv "API_DOMAIN_NAME"
+            putStrLn "starting automatic cache updates"
             forkIO $ forever $ delayedCaching cache (T.pack apikey) (precisionRange conf) (cities conf) (updatesInterval conf)
+            putStrLn "starting query listening"
             run (port conf) $ app1 cache (T.pack apikey) (precisionRange conf)
 
     where

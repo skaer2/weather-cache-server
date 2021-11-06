@@ -1,4 +1,4 @@
 port: 8080
-cities: ["London", "Syzran'"]
+cities: ["London", "Moscow", "Paris", "New York", "Prague"]
 updatesInterval: 1
 precisionRange: 8000

@@ -50,5 +50,4 @@ responceHandler cache apikey precision city dt = do
     case responce of 
         Just res -> return res
         Nothing -> do
-            liftIO $ putStrLn "throwing error"
             throwError $ err404 { errBody = "Erorr 404" }

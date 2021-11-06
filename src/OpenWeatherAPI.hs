@@ -36,35 +36,36 @@ type OpenWeatherAPI =
 api :: Proxy OpenWeatherAPI
 api = Proxy
 
---TODO: rename
-getWeatherResponce :: Maybe City -> Maybe OpenWeatherAPIKey -> Maybe Text -> ClientM OpenWeatherResponce
-getWeatherResponce = client api 
+openweatherQueryHandler :: Maybe City -> Maybe OpenWeatherAPIKey -> Maybe Text -> ClientM OpenWeatherResponce
+openweatherQueryHandler = client api 
 
 --(BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/")
 makeAPIQuery :: WeatherCache -> OpenWeatherAPIKey -> Int -> City -> Maybe Int -> IO (Maybe OpenWeatherResponce)
 makeAPIQuery cache apikey precision city maybeDatetime = do
-    putStrLn "makeAPIQuery"
     case maybeDatetime of
       Nothing -> do
-          putStrLn "datetime is Nothing"
           maybeRes <- getCurrentWeatherResponce city apikey
           case maybeRes of
               Just res -> insert cache (name res, dt res) res
           return maybeRes
-      Just dt -> do
+      Just datetime -> do
           ckeys <- keys cache
-          let closestMatch = last $ filter (\(c, x) -> c == city && x > dt - precision `div` 2 && x <= dt + precision `div` 2) ckeys
+          let closestMatch = last $ filter (isInRange datetime) ckeys
           res <- lookup cache (city, snd closestMatch)
           return res
+    where
+        isInRange :: Int -> (City, Int) -> Bool
+        isInRange dt (c, key) = (c == city) && key > (dt - precision `div` 2) && key <= (dt + precision `div` 2)
+
           
 getCurrentWeatherResponce :: City -> OpenWeatherAPIKey -> IO (Maybe OpenWeatherResponce)
 getCurrentWeatherResponce city apikey = do
     manager' <- newManager defaultManagerSettings
-    res <- runClientM ( getWeatherResponce (Just city) (Just apikey) (Just "metric") ) (mkClientEnv manager' (BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/"))
+    res <- runClientM ( openweatherQueryHandler (Just city) (Just apikey) (Just "metric") ) (mkClientEnv manager' (BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/"))
     case res of 
         Left err -> do
             putStrLn $ "Error: " ++ take 2000 (show err)
             return Nothing
         Right weatherResponce -> do
-            putStrLn $ show weatherResponce
+            --putStrLn $ show weatherResponce
             return (Just weatherResponce)
