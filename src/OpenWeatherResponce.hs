@@ -147,4 +147,6 @@ type City = Text
 
 type OpenWeatherAPIKey = Text
 
+type APIDomain = String
+
 type WeatherCache = Cache (City, Int) OpenWeatherResponce

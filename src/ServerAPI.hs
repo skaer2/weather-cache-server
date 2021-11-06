@@ -35,18 +35,18 @@ import OpenWeatherAPI
 type ServerAPI = 
     "weather" :> Capture "city" City :> QueryParam "datetime" Int :> Get '[JSON] OpenWeatherResponce
 
-server1 :: WeatherCache -> OpenWeatherAPIKey -> Int -> Server ServerAPI
-server1 cache apikey precision = responceHandler cache apikey precision 
+server1 :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> Server ServerAPI
+server1 cache apikey apidomain precision = responceHandler cache apikey apidomain precision 
 
 serverAPI :: Proxy ServerAPI
 serverAPI = Proxy
 
-app1 :: WeatherCache -> OpenWeatherAPIKey -> Int -> Application
-app1 cache apikey precision = serve serverAPI $ server1 cache apikey precision
+app1 :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> Application
+app1 cache apikey apidomain precision = serve serverAPI $ server1 cache apikey apidomain precision
 
-responceHandler :: WeatherCache -> OpenWeatherAPIKey -> Int -> City -> Maybe Int -> Handler OpenWeatherResponce
-responceHandler cache apikey precision city dt = do
-    responce <- liftIO $ makeAPIQuery cache apikey precision city dt 
+responceHandler :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> City -> Maybe Int -> Handler OpenWeatherResponce
+responceHandler cache apikey apidomain precision city dt = do
+    responce <- liftIO $ makeAPIQuery cache apikey apidomain precision city dt 
     case responce of 
         Just res -> return res
         Nothing -> do

@@ -57,10 +57,10 @@ generateCache :: Int64 -> IO WeatherCache
 generateCache expirationTime = newCache $ Just $ TimeSpec {sec = expirationTime, nsec = 0}
 
 
-delayedCaching :: WeatherCache -> OpenWeatherAPIKey -> Int -> [City] -> Int -> IO ()
-delayedCaching cache apikey precision cityList delay = do
+delayedCaching :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> [City] -> Int -> IO ()
+delayedCaching cache apikey apidomain precision cityList delay = do
     putStrLn "updating cache"
-    mapM (\city -> makeAPIQuery cache apikey precision city Nothing) cityList
+    mapM (\city -> makeAPIQuery cache apikey apidomain precision city Nothing) cityList
     threadDelay(10^6 * 60 * delay)
 
 main :: IO ()
@@ -76,11 +76,11 @@ main = do
             cache <- generateCache (cacheExpirationTime conf)
             insert cache ("London", 631) testResponce  
             apikey <- getEnv "API_KEY"
-            --apiDomainName <- getEnv "API_DOMAIN_NAME"
+            apiDomainName <- getEnv "API_DOMAIN_NAME"
             putStrLn "starting automatic cache updates"
-            forkIO $ forever $ delayedCaching cache (T.pack apikey) (precisionRange conf) (cities conf) (updatesInterval conf)
+            forkIO $ forever $ delayedCaching cache (T.pack apikey) apiDomainName (precisionRange conf) (cities conf) (updatesInterval conf)
             putStrLn "starting query listening"
-            run (port conf) $ app1 cache (T.pack apikey) (precisionRange conf)
+            run (port conf) $ app1 cache (T.pack apikey) apiDomainName (precisionRange conf)
 
     where
         getConfig :: IO (Either ParseException Config)

@@ -40,11 +40,11 @@ openweatherQueryHandler :: Maybe City -> Maybe OpenWeatherAPIKey -> Maybe Text -
 openweatherQueryHandler = client api 
 
 --(BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/")
-makeAPIQuery :: WeatherCache -> OpenWeatherAPIKey -> Int -> City -> Maybe Int -> IO (Maybe OpenWeatherResponce)
-makeAPIQuery cache apikey precision city maybeDatetime = do
+makeAPIQuery :: WeatherCache -> OpenWeatherAPIKey -> APIDomain -> Int -> City -> Maybe Int -> IO (Maybe OpenWeatherResponce)
+makeAPIQuery cache apikey apidomain precision city maybeDatetime = do
     case maybeDatetime of
       Nothing -> do
-          maybeRes <- getCurrentWeatherResponce city apikey
+          maybeRes <- getCurrentWeatherResponce apikey apidomain city 
           case maybeRes of
               Just res -> insert cache (name res, dt res) res
           return maybeRes
@@ -58,10 +58,12 @@ makeAPIQuery cache apikey precision city maybeDatetime = do
         isInRange dt (c, key) = (c == city) && key > (dt - precision `div` 2) && key <= (dt + precision `div` 2)
 
           
-getCurrentWeatherResponce :: City -> OpenWeatherAPIKey -> IO (Maybe OpenWeatherResponce)
-getCurrentWeatherResponce city apikey = do
+getCurrentWeatherResponce :: OpenWeatherAPIKey -> APIDomain -> City -> IO (Maybe OpenWeatherResponce)
+getCurrentWeatherResponce apikey apidomain city = do
     manager' <- newManager defaultManagerSettings
-    res <- runClientM ( openweatherQueryHandler (Just city) (Just apikey) (Just "metric") ) (mkClientEnv manager' (BaseUrl Http "api.openweathermap.org" 80 "/data/2.5/"))
+    let cM = openweatherQueryHandler (Just city) (Just apikey) (Just "metric") 
+    let cEnv = mkClientEnv manager' (BaseUrl Http apidomain 80 "/data/2.5/")
+    res <- runClientM cM cEnv
     case res of 
         Left err -> do
             putStrLn $ "Error: " ++ take 2000 (show err)
